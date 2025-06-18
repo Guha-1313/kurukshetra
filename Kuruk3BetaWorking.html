@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kurukshetra Battle Game</title>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Courier New', Courier, monospace;
+      color: white;
+      background: url('MainBg.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    .button {
+      background: gold;
+      border: 2px solid white;
+      padding: 10px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 10px;
+      color: white;
+      text-shadow: 1px 1px 3px black;
+      cursor: pointer;
+      box-shadow: 0 0 10px gold;
+    }
+
+    .level-select {
+      display: none;
+      text-align: center;
+      margin-top: 50px;
+    }
+
+    .level-button {
+      width: 60px;
+      height: 60px;
+      margin: 10px;
+      display: inline-block;
+      background: rgba(255, 255, 0, 0.9);
+      border-radius: 10px;
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 60px;
+      box-shadow: 0 0 15px yellow;
+      cursor: pointer;
+    }
+
+    .locked {
+      background: rgba(100, 100, 100, 0.8);
+      box-shadow: 0 0 10px gray;
+      cursor: not-allowed;
+    }
+
+    #game {
+      display: none;
+      max-width: 800px;
+      margin: 20px auto;
+      border: 4px solid gold;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border-radius: 10px;
+      position: relative;
+    }
+
+    .bar-container {
+      background: #222;
+      border: 1px solid white;
+      width: 100%;
+      height: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .bar {
+      height: 100%;
+      background: limegreen;
+      width: 100%;
+      box-shadow: 0 0 10px green;
+    }
+
+    #battleLog {
+      max-height: 100px;
+      overflow-y: auto;
+      margin-top: 10px;
+      font-size: 14px;
+      animation: fadein 0.5s ease-in-out;
+    }
+
+    @keyframes fadein {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    #attackWindow,
+    #statWindow {
+      display: none;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+    }
+
+    .stat-bar {
+      display: flex;
+      gap: 2px;
+    }
+
+    .bar-box {
+      width: 20px;
+      height: 10px;
+      background: gray;
+    }
+
+    .bar-box.active {
+      background: lime;
+    }
+
+    .glow-effect {
+      animation: glowblue 1s ease-in-out;
+    }
+
+    @keyframes glowblue {
+      0% {
+        background: rgba(0, 0, 255, 0.3);
+      }
+
+      100% {
+        background: transparent;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div style="text-align: center; margin-top: 50px;">
+    <button class="button" onclick="showLevelSelect()">Start Battle</button>
+  </div>
+
+  <div class="level-select" id="levelSelect">
+    <h2>Select Level</h2>
+    <div id="levelButtons"></div>
+  </div>
+
+  <div id="game">
+    <div>
+      <h2 id="enemyName">Enemy</h2>
+      <div class="bar-container">
+        <div id="enemyHP" class="bar"></div>
+      </div>
+    </div>
+
+    <div>
+      <h3>You</h3>
+      <div class="bar-container">
+        <div id="playerHP" class="bar"></div>
+      </div>
+    </div>
+
+    <div id="turnTimer">Time: 10</div>
+    <div id="coins">Coins: 0</div>
+    <div id="battleLog"></div>
+
+    <div id="mainOptions">
+      <button class="button" onclick="openAttackWindow()">Attack</button>
+      <button class="button" onclick="openStatWindow()">Stats</button>
+      <button class="button" onclick="guard()">Guard</button>
+      <button class="button" onclick="giveUp()">Give Up</button>
+    </div>
+
+    <div id="attackWindow">
+      <button class="button" onclick="playerAttack('Strike')">Strike</button>
+      <button class="button" onclick="playerAttack('Slash')">Slash</button>
+      <button class="button" onclick="playerAttack('Pierce')">Pierce</button>
+      <button class="button" onclick="useUltimate()">Ultimate ⚡</button>
+      <button class="button" onclick="closeWindows()">Back</button>
+    </div>
+
+    <div id="statWindow">
+      <div class="stat-row">
+        <span>Attack</span>
+        <div class="stat-bar" id="atkStat"></div>
+        <button class="button" onclick="upgradeStat('atk')">Upgrade 10💰</button>
+      </div>
+      <div class="stat-row">
+        <span>Defense</span>
+        <div class="stat-bar" id="defStat"></div>
+        <button class="button" onclick="upgradeStat('def')">Upgrade 10💰</button>
+      </div>
+      <div class="stat-row">
+        <span>HP</span>
+        <div class="stat-bar" id="hpStat"></div>
+        <button class="button" onclick="upgradeStat('hp')">Upgrade 10💰</button>
+      </div>
+      <button class="button" onclick="closeWindows()">Back</button>
+    </div>
+  </div>
+
+  <script>
+    const enemies = ["Ashwatthama", "Karna", "Bhishma", "Drona", "Shalya"];
+    let currentLevel = 0;
+    let unlockedLevels = 1;
+    let playerHP = 100, enemyHP = 100, maxPlayerHP = 100, maxEnemyHP = 100;
+    let playerTurn = true;
+    let timer;
+    let coins = 0;
+    let stats = { atk: 0, def: 0, hp: 0 };
+    let ultimateCharge = 0;
+
+    function showLevelSelect() {
+      document.querySelector('button').style.display = 'none';
+      document.getElementById('levelSelect').style.display = 'block';
+      renderLevels();
+    }
+
+    function renderLevels() {
+      const container = document.getElementById('levelButtons');
+      container.innerHTML = '';
+      for (let i = 0; i < enemies.length; i++) {
+        const btn = document.createElement('div');
+        btn.innerText = i + 1;
+        btn.className = 'level-button' + (i < unlockedLevels ? '' : ' locked');
+        if (i < unlockedLevels) btn.onclick = () => startLevel(i);
+        container.appendChild(btn);
+      }
+    }
+
+    function startLevel(index) {
+      currentLevel = index;
+      document.getElementById('levelSelect').style.display = 'none';
+      document.getElementById('game').style.display = 'block';
+      playerHP = 100 + stats.hp * 20;
+      maxPlayerHP = playerHP;
+      enemyHP = 100 + index * 30;
+      maxEnemyHP = enemyHP;
+      ultimateCharge = 0;
+      playerTurn = true;
+      updateUI();
+      log(`⚔️ ${enemies[index]} enters the battlefield!`);
+      startTurnTimer();
+    }
+
+    function startTurnTimer() {
+      let time = 10;
+      document.getElementById('turnTimer').innerText = `Time: ${time}`;
+      timer = setInterval(() => {
+        time--;
+        document.getElementById('turnTimer').innerText = `Time: ${time}`;
+        if (time <= 0) {
+          clearInterval(timer);
+          log("⏳ Turn skipped!");
+          endPlayerTurn();
+        }
+      }, 1000);
+    }
+
+    function updateUI() {
+      document.getElementById('enemyName').innerText = enemies[currentLevel];
+      document.getElementById('enemyHP').style.width = (enemyHP / maxEnemyHP * 100) + '%';
+      document.getElementById('playerHP').style.width = (playerHP / maxPlayerHP * 100) + '%';
+      document.getElementById('coins').innerText = `Coins: ${coins}`;
+      ['atk', 'def', 'hp'].forEach(stat => {
+        const container = document.getElementById(stat + 'Stat');
+        container.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+          const bar = document.createElement('div');
+          bar.className = 'bar-box' + (i < stats[stat] ? ' active' : '');
+          container.appendChild(bar);
+        }
+      });
+    }
+
+    function log(msg) {
+      const logBox = document.getElementById('battleLog');
+      const p = document.createElement('p');
+      p.innerText = msg;
+      p.style.opacity = 1;
+      logBox.appendChild(p);
+      setTimeout(() => p.style.opacity = 0.3, 3000);
+    }
+
+    function openAttackWindow() {
+      if (!playerTurn) return;
+      document.getElementById('mainOptions').style.display = 'none';
+      document.getElementById('attackWindow').style.display = 'block';
+    }
+
+    function openStatWindow() {
+      document.getElementById('mainOptions').style.display = 'none';
+      document.getElementById('statWindow').style.display = 'block';
+    }
+
+    function closeWindows() {
+      document.getElementById('attackWindow').style.display = 'none';
+      document.getElementById('statWindow').style.display = 'none';
+      document.getElementById('mainOptions').style.display = 'block';
+    }
+
+    function upgradeStat(stat) {
+      if (coins >= 10 && stats[stat] < 5) {
+        stats[stat]++;
+        coins -= 10;
+        updateUI();
+        log(`🔧 Upgraded ${stat} stat.`);
+      } else {
+        log("❌ Not enough coins or maxed out.");
+      }
+    }
+
+    function playerAttack(type) {
+      let damage = 10 + stats.atk * 5;
+      if (type === 'Slash') damage += 5;
+      if (type === 'Pierce') damage += 10;
+      enemyHP -= damage;
+      log(`💥 ${type} deals ${damage} damage.`);
+      ultimateCharge++;
+      if (ultimateCharge >= 5) log("⚡ Ultimate Ready!");
+      updateUI();
+      closeWindows();
+      endPlayerTurn();
+    }
+
+    function useUltimate() {
+      if (ultimateCharge < 5) {
+        log("⚠️ Ultimate not charged.");
+        return;
+      }
+      document.getElementById('game').classList.add('glow-effect');
+      setTimeout(() => document.getElementById('game').classList.remove('glow-effect'), 1000);
+      log("🕉️ Arjuna summons Krishna. Krishna uses Bhramastra!");
+      let damage = 60 + stats.atk * 10;
+      enemyHP -= damage;
+      ultimateCharge = 0;
+      updateUI();
+      closeWindows();
+      endPlayerTurn();
+    }
+
+    function guard() {
+      log("🛡️ You are guarding.");
+      endPlayerTurn();
+    }
+
+    function giveUp() {
+      log("🪦 You gave up. Dharma fades.");
+      endBattle();
+    }
+
+    function endPlayerTurn() {
+      playerTurn = false;
+      clearInterval(timer);
+      setTimeout(enemyTurn, 1000);
+    }
+
+    function enemyTurn() {
+      if (enemyHP <= 0) return winBattle();
+      let damage = 15 + currentLevel * 5 - stats.def * 3;
+      playerHP -= damage;
+      log(`⚔️ ${enemies[currentLevel]} attacks for ${damage} damage.`);
+      updateUI();
+      if (playerHP <= 0) return log("☠️ You have fallen.");
+      playerTurn = true;
+      startTurnTimer();
+    }
+
+    function winBattle() {
+      log("🏆 Victory!");
+      coins += 20;
+      if (unlockedLevels === currentLevel + 1) unlockedLevels++;
+      setTimeout(() => {
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('levelSelect').style.display = 'block';
+        renderLevels();
+      }, 2000);
+    }
+
+    function endBattle() {
+      document.getElementById('game').style.display = 'none';
+      document.getElementById('levelSelect').style.display = 'block';
+    }
+  </script>
+</body>
+
+</html>
